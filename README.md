@@ -6,13 +6,10 @@ Some code and code snippets on gRPC based microservices by Golang
 
 ### The gRPC server part
 It supports 4 kinds of API:
-Unary RPC
-
-Server streaming RPC 
-
-Client streaming RPC
-
-Bidirectional streaming RPC
+* Unary RPC
+* Server streaming RPC 
+* Client streaming RPC
+* Bidirectional streaming RPC
 
 with option on Deadlines/Timeouts
 
