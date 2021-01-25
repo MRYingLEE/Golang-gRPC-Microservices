@@ -25,19 +25,84 @@ The web server part is based on https://github.com/fullstorydev/grpcui. The auth
 
 gRPCui is great, but its built-in web server solution is not well-known. I only found a simple example at https://gist.github.com/jhump/3b29dbc042b9ce97536680046202f066.
 
-
-### The gRPC client in Golang
-Nearly all tutorial on gRPC is too technical and make gRPC looks like an ugly toy, althouth it is much friendly than traditional Restful API.
-
-So I wrappered the client code further to make it just look as a normal method. This will make the remote call looks much more natual.
-
 #### Credit
 The gRPC server part is adapted from https://github.com/simplesteph/grpc-go-course/tree/master/greet
 
 ### To put all together
 To make the gRPC concepts and features clearly, I put all together in 1 application.
 
-So far, they are using different ports. But I am trying to use the same port. 
+
+```go
+
+	s := grpc.NewServer(opts...)
+	greetpb.RegisterGreetServiceServer(s, &server{})
+	// Register reflection service on gRPC server.
+	reflection.Register(s)
+
+	// Here goroutine is used to launch the gRPC server
+	go func() {
+		if err := s.Serve(lis); err != nil {
+			log.Fatalf("failed to serve: %v", err)
+		}
+	}()
+
+	grpcPort := 50051
+	//----------------------------
+	// Create a client to local server
+	//----------------------------
+	cc, err := grpc.Dial(fmt.Sprintf("127.0.0.1:%d", grpcPort), grpc.WithInsecure())
+	if err != nil {
+		log.Fatalf("failed to create client to local server: %v", err)
+	}
+
+	//----------------------------
+	// Create gRPCui handler
+	//----------------------------
+
+	//target := fmt.Sprintf("%s:%d", filepath.Base(os.Args[0]), grpcPort)
+	target := fmt.Sprintf("%s:%d", "127.0.0.1", grpcPort)
+
+	// This one line of code is all that is needed to create the UI handler!
+	fmt.Println(target)
+	h, err := standalone.HandlerViaReflection(context.Background(), cc, target)
+	if err != nil {
+		log.Fatalf("failed to create client to local server: %v", err)
+	}
+
+	//----------------------------
+	// Now wire it up to an HTTP server
+	//----------------------------
+	httpPort := 80
+	serveMux := http.NewServeMux()
+
+	fmt.Println("HTTP server started")
+	serveMux.Handle("/grpcui/", http.StripPrefix("/grpcui", h))
+	// register other handlers...
+	serveMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("content-type", "html")
+		_, _ = fmt.Fprintf(w, `
+				<html>
+				<head><title>Example server</title></head>
+				<body>
+				<h1>Greeting!</h1>
+				<p>Check out the gRPC UI <a href="/grpcui/">here</a>.</p>
+				</body>
+				</html>
+			`)
+	})
+
+	ll, errr := net.Listen("tcp", fmt.Sprintf(":%d", httpPort))
+	if errr != nil {
+		log.Fatalf("failed to open listen socket on port %d: %v", httpPort, errr)
+	}
+
+	err = http.Serve(ll, serveMux)
+	if err != nil {
+		log.Fatalf("failed to serve HTTP: %v", err)
+	}
+
+
+```
 
 
 
